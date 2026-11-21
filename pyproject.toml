@@ -1,0 +1,23 @@
+# The importable library is `src/spswire`. Tests put `src` on the path. There is no
+# build backend and no third-party dependency. Publishing is not this file's job.
+
+[project]
+name = "spswire"
+version = "0"
+description = "Read the firmware-container formats of a GM GMG3 service-programming update set"
+readme = "PLAN.md"
+requires-python = ">=3.12"
+dependencies = []
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["src"]
+addopts = "-ra"
+
+[tool.ruff]
+target-version = "py312"
+line-length = 100
+
+[tool.ruff.format]
+quote-style = "double"
+indent-style = "space"
