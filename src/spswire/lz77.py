@@ -1,11 +1,11 @@
 """The GM ``comp=0x4d`` uImage LZ77 codec, decode side.
 
 GMG3 head-unit kernels ship as a U-Boot legacy image whose compression byte is
-``0x4d`` (``'M'``) -- a custom type stock U-Boot does not define. The bootloader
-``u-boot.bin.generic`` carries the codec (reversed as ``FUN_1782a130`` at text base
-``0x17800000``) and the error string ``LZ77: uncompress or overwrite error %d``.
+``0x4d`` (``'M'``) -- a custom type stock U-Boot does not define. The matching
+bootloader carries the codec and the error string
+``LZ77: uncompress or overwrite error %d``.
 
-Stream shape, taken from that decompilation (``volt/docs/BOOT-PARTITION.md`` section 3):
+Stream shape:
 
 * An 8-byte little-endian header ``[u32 out_size][u32 comp_size]``. ``out_size`` is the
   size of the decoded output; ``comp_size`` is the length of the token body. The caller

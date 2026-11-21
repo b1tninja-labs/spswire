@@ -1,7 +1,7 @@
 """The i.MX6 Image Vector Table that heads GMG3 SPL / reset-vector images.
 
 ``resetvect.bin`` and ``bootloader.bin`` in the boot partition are i.MX6 boot images headed
-by an IVT (``volt/docs/BOOT-PARTITION.md`` section 2). The IVT is eight little-endian words::
+by an IVT. The IVT is eight little-endian words::
 
     0  header     tag 0xD1, length 0x0020 (big-endian), version
     1  entry      first-instruction address
@@ -14,8 +14,8 @@ by an IVT (``volt/docs/BOOT-PARTITION.md`` section 2). The IVT is eight little-e
 
 ``self`` is the load address of the IVT, so a pointer's file offset is ``pointer - self``.
 An image that reserves a ``csf`` pointer whose file offset lands at end-of-file carries no
-CSF block -- the "built for signing, shipped unsigned" HAB-open shape of these GMG3 images.
-This reader parses the table and reports that shape; it does not validate a signature.
+CSF block -- a HAB image header with the CSF slot present but empty. This reader parses the
+table and reports that shape; it does not validate a signature.
 """
 
 from __future__ import annotations

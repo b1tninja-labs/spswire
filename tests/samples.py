@@ -1,4 +1,4 @@
-"""Synthetic format samples built to the specs in ``volt/docs``.
+"""Synthetic format samples built to the documented format specs.
 
 No GM firmware bytes are vendored. Every buffer here is constructed field by field from the
 documented layout so the readers can be exercised without a sample from a car.

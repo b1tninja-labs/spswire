@@ -8,11 +8,10 @@ update set. It parses bytes and returns structure.
   it does not evaluate a certificate chain or an RSA signature.
 - Do not vendor GM firmware. No `.mnf`, `.smd`, `container.iso`, `uImage`, `master.dnl`, `.bin` or
   any firmware byte goes into this repository. Test buffers are built field by field from the
-  documented layouts in `volt/docs` (see `docs/sources.md`). Treat `volt` as read-only.
-- Do not guess a byte layout. Implement a format only where the `volt` write-up pins it
-  byte-for-byte. The binary `.mnf` index and the V850 `master.dnl` `$FLW_WRITER` framing are
-  described but not pinned there; they stay `[ ]` ROADMAP rows until a sample fixes the record
-  widths. Flag offsets the way the write-up does.
+  documented layouts (see `docs/sources.md`).
+- Do not guess a byte layout. Implement a format only where its byte layout is fixed. The binary
+  `.mnf` index and the V850 `master.dnl` `$FLW_WRITER` framing are not pinned; they stay `[ ]`
+  ROADMAP rows until a sample fixes the record widths.
 - Do not keep a second ISO 9660 reader. `container.iso` is an ISO 9660 volume; the sibling
   `iso9660` project returns a member's bytes. The container row maps known paths through it.
 - Do not add a dependency or a build backend. The library is pure standard library; `dependencies`

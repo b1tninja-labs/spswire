@@ -1,9 +1,9 @@
 """The U-Boot legacy image header carried by GMG3 ``uImage`` and ramdisk members.
 
 The header is the 64-byte big-endian ``image_header_t`` that ``mkimage`` writes, magic
-``0x27051956``. The GMG3 boot partition (``volt/docs/BOOT-PARTITION.md`` section 4) ships a
-kernel ``uImage`` whose ``comp`` byte is ``0x4d`` -- the GM LZ77 codec in :mod:`spswire.lz77`,
-not one of the stock methods -- and a ``dlinitramfs.cpio.gz.uboot`` ramdisk of type 3.
+``0x27051956``. The GMG3 boot partition ships a kernel ``uImage`` whose ``comp`` byte is
+``0x4d`` -- the GM LZ77 codec in :mod:`spswire.lz77`, not one of the stock methods -- and a
+``dlinitramfs.cpio.gz.uboot`` ramdisk of type 3.
 
 This reader parses the header and returns the payload slice. It does not verify the header
 or data CRC (``verify=no`` on this build) and it does not decompress: a ``0x4d`` payload is

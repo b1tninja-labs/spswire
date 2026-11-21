@@ -9,7 +9,7 @@ from spswire import ivt
 
 
 def test_a_bootloader_ivt_is_parsed():
-    # bootloader.bin from the write-up: entry 0x00909030, self 0x00909000, no DCD.
+    # An SPL-style IVT in the i.MX6 OCRAM region: entry 0x00909030, self 0x00909000, no DCD.
     image = samples.ivt(
         entry=0x00909030, self_ptr=0x00909000, csf_file_offset=0x4110, file_len=0x4110
     )

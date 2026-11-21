@@ -1,8 +1,7 @@
 """The GM ``.smd`` signature bundle shipped beside a signed GMG3 update manifest.
 
-The ``.smd`` (``volt/docs/UPDATE-CONTAINER.md`` section 7) is **not** PKCS#7. It is a
-PEM-delimited bundle: one signer certificate, then detached digest / signature pairs for the
-manifest and for each firmware part number::
+The ``.smd`` is **not** PKCS#7. It is a PEM-delimited bundle: one signer certificate, then
+detached digest / signature pairs for the manifest and for each firmware part number::
 
     -----BEGIN CERTIFICATE-----                            signer leaf
     -----BEGIN SHA256 MANIFEST-----                        base64 SHA-256 of the .mnf

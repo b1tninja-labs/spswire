@@ -9,7 +9,7 @@ from spswire import lz77
 
 
 def test_a_literal_only_stream_round_trips():
-    plaintext = b"GMG3G_LINUX_15.2B033"
+    plaintext = b"spswire lz77 round-trip sample"
     assert lz77.decompress(samples.roundtrip_lz77(plaintext)) == plaintext
 
 

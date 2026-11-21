@@ -1,14 +1,13 @@
 """The GM ``.mnf`` manifest: the base64 release XML it carries.
 
-The ``.mnf`` (``volt/docs/UPDATE-CONTAINER.md`` section 6) is not plain XML. Its header is a
-binary part-number to ``(size, SHA-256)`` index, followed by a base64 blob that decodes to
-the release XML (the ``<OVERALL>`` / ``<RELEASE>`` / ``<DEVICE>`` tree with ``SKIPCHECKSUM``,
-``update_certificate`` and the per-PN hashes).
+The ``.mnf`` is not plain XML. Its header is a binary part-number to ``(size, SHA-256)``
+index, followed by a base64 blob that decodes to the release XML (the ``<OVERALL>`` /
+``<RELEASE>`` / ``<DEVICE>`` tree with the per-PN hashes).
 
 This reader recovers the release XML, which is byte-defined: it is the longest base64 run in
-the file whose decode is an XML document. The binary index record layout is not fixed by the
-public write-up -- it needs a sample ``.mnf`` to pin field widths -- so it is a ROADMAP row,
-not a guessed parser here. No firmware sample is vendored into this repository.
+the file whose decode is an XML document. The binary index record layout is not fixed without
+a sample ``.mnf`` to pin field widths -- so it is a ROADMAP row, not a guessed parser here. No
+firmware sample is vendored into this repository.
 """
 
 from __future__ import annotations

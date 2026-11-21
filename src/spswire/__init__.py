@@ -6,8 +6,8 @@ LZ77 codec, the U-Boot legacy image header, the i.MX6 Image Vector Table, the GM
 signature bundle, and the ``.mnf`` manifest's release XML. It parses bytes and returns
 structure; it never flashes, verifies, signs, or opens a device, and it vendors no firmware.
 
-The byte-level authority is the ``volt`` reverse-engineering write-up (read-only, not
-vendored here); ``docs/sources.md`` records it and the public format references.
+Formats are documented from public references recorded in ``docs/sources.md``; no firmware is
+vendored here.
 """
 
 from __future__ import annotations
