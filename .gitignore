@@ -7,6 +7,16 @@
 uImage
 master.dnl
 
+# Private research notes stay out of this tooling repo (they live with the research).
+*HANDOFF*.md
+*HANDOVER*.md
+*-notes.md
+NOTES.md
+notes/
+research/
+.scratch/
+scratch/
+
 __pycache__/
 *.py[cod]
 .pytest_cache/
