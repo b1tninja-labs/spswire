@@ -6,6 +6,7 @@ name = "spswire"
 version = "0"
 description = "Read the firmware-container formats of a GM GMG3 service-programming update set"
 readme = "PLAN.md"
+license = "Apache-2.0"
 requires-python = ">=3.12"
 dependencies = []
 
