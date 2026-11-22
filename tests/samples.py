@@ -133,6 +133,27 @@ def lz77_uimage(plaintext: bytes) -> bytes:
     return uimage(roundtrip_lz77(plaintext), comp=uimage_mod.COMP_GM_LZ77)
 
 
+def dnl_section_header(type_byte: int, index: int) -> bytes:
+    """One aligned $FLW_WRITER section-record header (16 bytes ending 00 80)."""
+    return bytes([type_byte, index]) + b"\x00" * 6 + b"\x70\x00\x12\x34\x56\x78" + b"\x00\x80"
+
+
+def dnl_stream(device: str = "D70F4006", sections: list[tuple[int, int]] | None = None) -> bytes:
+    """A synthetic master.dnl: a record-0 header with a device marker, $FLW_WRITER, section records."""
+    if sections is None:
+        sections = [(0x80, 0x00), (0x84, 0x01), (0x84, 0x02)]
+    out = bytearray()
+    out += dnl_section_header(*sections[0])  # record 0
+    out += b"\x55" * (0xDD - len(out))  # fill up to the device marker offset
+    out += device.encode("ascii") + b"  "
+    out += b"\x55" * (0x3760 - len(out))
+    out += b"$FLW_WRITER\x00"
+    for type_byte, index in sections[1:]:
+        out += b"\x55" * 64
+        out += dnl_section_header(type_byte, index)
+    return bytes(out)
+
+
 class FakeVolume:
     """A minimal ISO-9660 reader stand-in: member(path) over a dict, raising KeyError-as-member."""
 
