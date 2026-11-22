@@ -28,3 +28,27 @@ def test_a_stream_without_the_signature_is_not_flw_writer():
 def test_a_missing_device_marker_is_an_error():
     with pytest.raises(dnl.DNLError):
         dnl.device_marker(b"\x55" * 4096)
+
+
+def test_the_embedded_rsa_verifier_is_detected():
+    stream = samples.dnl_stream() + samples.dnl_rsa_blob(["ripemd160", "sha1", "sha256"])
+    v = dnl.rsa_verifier(stream)
+    assert v.present
+    assert v.scheme_label
+    assert set(v.digests) == {"ripemd160", "sha1", "sha256"}
+    assert v.public_exponent_f4
+
+
+def test_a_stream_with_no_verifier_apparatus_reports_absent():
+    v = dnl.rsa_verifier(samples.dnl_stream())
+    assert not v.present
+    assert v.digests == ()
+    assert not v.scheme_label
+
+
+def test_the_weak_digest_oids_are_reported_for_review():
+    # RIPEMD-160 and SHA-1 being accepted is itself a weakness worth surfacing.
+    stream = samples.dnl_stream() + samples.dnl_rsa_blob(["sha1"], exponent=False)
+    v = dnl.rsa_verifier(stream)
+    assert "sha1" in v.digests
+    assert not v.public_exponent_f4

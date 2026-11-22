@@ -154,6 +154,23 @@ def dnl_stream(device: str = "D70F4006", sections: list[tuple[int, int]] | None 
     return bytes(out)
 
 
+_DIGESTINFO_PREFIX = {
+    "ripemd160": bytes.fromhex("3021300906052b2403020105000414"),
+    "sha1": bytes.fromhex("3021300906052b0e03021a05000414"),
+    "sha256": bytes.fromhex("3031300d060960864801650304020105000420"),
+}
+
+
+def dnl_rsa_blob(digests: list[str], exponent: bool = True) -> bytes:
+    """The bytes of an embedded PKCS#1 v1.5 verifier: the DigestInfo prefixes, label, exponent."""
+    blob = b"\x55" * 16
+    for name in digests:
+        blob += _DIGESTINFO_PREFIX[name] + b"\x00" * 4
+    blob += b"RSASSA-PKCS1-v1_5\x00"
+    blob += b"\x55" * 8 + (b"\x01\x00\x01" if exponent else b"\x00\x00\x00")
+    return blob
+
+
 class FakeVolume:
     """A minimal ISO-9660 reader stand-in: member(path) over a dict, raising KeyError-as-member."""
 
