@@ -101,6 +101,27 @@ def mnf(index_bytes: bytes, release_xml: bytes) -> bytes:
     return index_bytes + base64.b64encode(release_xml)
 
 
+def mnf_record(pn: str, size_blocks: int, sha256: bytes) -> bytes:
+    """One 57-byte .mnf index record: PN(8) + size(u32 BE) + SHA-256(32) + 0x1f + 12-byte pad."""
+    return pn.encode("ascii") + struct.pack(">I", size_blocks) + sha256 + b"\x1f" + b"\x00" * 12
+
+
+def mnf_with_index(
+    entries: list[tuple[str, int, bytes]],
+    release_xml: bytes,
+    smd_pn: str = "84089010",
+) -> bytes:
+    """Build a .mnf: header, a zeroed .smd row, 57-byte records, a trailer, then the base64 XML."""
+    out = bytearray(b"\x00\x01\x40\x1f")
+    out += b"\x00" * 20
+    out += smd_pn.encode("ascii") + b"\x1f" + b"\x00" * 20  # the zeroed signing row
+    for pn, size_blocks, sha256 in entries:
+        out += mnf_record(pn, size_blocks, sha256)
+    out += b"\x00" * 16  # a trailing header (non-base64) before the blob
+    out += base64.b64encode(release_xml)
+    return bytes(out)
+
+
 def roundtrip_lz77(plaintext: bytes) -> bytes:
     """A literal-only reference encoding of ``plaintext`` for the decoder to recover."""
     tokens = [lz77_token(byte) for byte in plaintext]
