@@ -4,7 +4,8 @@ Each subcommand reads a file's bytes and prints the structure one field per line
 ``uImage`` header, a ``.mnf`` binary index (or its release XML), an i.MX IVT, a ``.smd``
 bundle, or a ``master.dnl`` ``$FLW_WRITER`` summary. ``container`` takes no file: it prints the
 documented ``container.iso`` path layout, which is spswire's own data and needs no ISO reader.
-``detect`` names the format of an unlabelled file (and exits 1 when nothing matches).
+``detect`` names the format of an unlabelled file (and exits 1 when nothing matches). The dump
+subcommands take ``--json`` for a machine-readable object instead of the aligned text.
 
 The CLI only reads and reports. It never writes, flashes, verifies or re-encodes, and it adds no
 dependency: it is pure standard library over the library in this package.
@@ -13,6 +14,7 @@ dependency: it is pure standard library over the library in this package.
 from __future__ import annotations
 
 import argparse
+import json
 from collections.abc import Sequence
 
 from spswire import container, detect, dnl, ivt, mnf, smd, uimage
@@ -23,8 +25,27 @@ def _read(path: str) -> bytes:
         return handle.read()
 
 
+def _emit_json(payload: object) -> int:
+    print(json.dumps(payload, indent=2))
+    return 0
+
+
 def _cmd_uimage(args: argparse.Namespace) -> int:
     header = uimage.parse(_read(args.file))
+    if args.json:
+        return _emit_json(
+            {
+                "name": header.name,
+                "size": header.size,
+                "load": header.load,
+                "entry": header.entry,
+                "os": header.os_name,
+                "arch": header.arch_name,
+                "type": header.type_name,
+                "comp": header.comp_name,
+                "gm_lz77": header.is_gm_lz77,
+            }
+        )
     print(f"name     {header.name}")
     print(f"size     {header.size}")
     print(f"load     0x{header.load:08x}")
@@ -42,7 +63,21 @@ def _cmd_mnf(args: argparse.Namespace) -> int:
     if args.xml:
         print(mnf.release_xml(data).decode("utf-8", "replace"))
         return 0
-    for entry in mnf.index(data):
+    entries = mnf.index(data)
+    if args.json:
+        return _emit_json(
+            [
+                {
+                    "part_number": entry.part_number,
+                    "size_blocks": entry.size_blocks,
+                    "nominal_size": entry.nominal_size,
+                    "sha256": entry.sha256.hex(),
+                    "zeroed": entry.zeroed,
+                }
+                for entry in entries
+            ]
+        )
+    for entry in entries:
         if entry.zeroed:
             print(f"{entry.part_number}  (signing .smd row)")
         else:
@@ -53,11 +88,22 @@ def _cmd_mnf(args: argparse.Namespace) -> int:
 def _cmd_ivt(args: argparse.Namespace) -> int:
     data = _read(args.file)
     table = ivt.parse(data)
+    csf = table.csf_file_offset()
+    if args.json:
+        return _emit_json(
+            {
+                "version": table.version,
+                "entry": table.entry,
+                "self": table.self_ptr,
+                "dcd": table.dcd if table.has_dcd else None,
+                "csf": csf,
+                "hab_open": table.is_hab_open(len(data)),
+            }
+        )
     print(f"version   0x{table.version:02x}")
     print(f"entry     0x{table.entry:08x}")
     print(f"self      0x{table.self_ptr:08x}")
     print(f"dcd       {'0x%08x' % table.dcd if table.has_dcd else 'none'}")
-    csf = table.csf_file_offset()
     print(f"csf       {'0x%x' % csf if csf is not None else 'none'}")
     print(f"hab-open  {'yes' if table.is_hab_open(len(data)) else 'no'}")
     return 0
@@ -66,6 +112,23 @@ def _cmd_ivt(args: argparse.Namespace) -> int:
 def _cmd_smd(args: argparse.Namespace) -> int:
     bundle = smd.parse(_read(args.file))
     cert = bundle.signer_certificate
+    if args.json:
+        return _emit_json(
+            {
+                "signer_bytes": len(cert) if cert is not None else None,
+                "manifest": {
+                    "digest": bundle.manifest_digest is not None,
+                    "signature": bundle.manifest_signature is not None,
+                },
+                "parts": {
+                    pn: {
+                        "digest": part.digest is not None,
+                        "signature": part.signature is not None,
+                    }
+                    for pn, part in sorted(bundle.parts.items())
+                },
+            }
+        )
     print(f"signer    {len(cert)} B" if cert is not None else "signer    (none)")
     print(
         f"manifest  digest={'yes' if bundle.manifest_digest else 'no'} "
@@ -82,16 +145,32 @@ def _cmd_smd(args: argparse.Namespace) -> int:
 
 def _cmd_dnl(args: argparse.Namespace) -> int:
     data = _read(args.file)
-    print(f"flw-writer  {'yes' if dnl.has_flw_writer(data) else 'no'}")
     try:
-        print(f"device      {dnl.device_marker(data)}")
+        marker: str | None = dnl.device_marker(data)
     except dnl.DNLError:
-        print("device      (not found)")
+        marker = None
     headers = dnl.section_headers(data)
+    verifier = dnl.rsa_verifier(data)
+    if args.json:
+        return _emit_json(
+            {
+                "flw_writer": dnl.has_flw_writer(data),
+                "device": marker,
+                "sections": [
+                    {"offset": h.offset, "type": h.type, "index": h.index} for h in headers
+                ],
+                "rsa": {
+                    "present": verifier.present,
+                    "exponent_65537": verifier.public_exponent_f4,
+                    "digests": list(verifier.digests),
+                },
+            }
+        )
+    print(f"flw-writer  {'yes' if dnl.has_flw_writer(data) else 'no'}")
+    print(f"device      {marker if marker is not None else '(not found)'}")
     print(f"sections    {len(headers)}")
     for header in headers:
         print(f"  0x{header.offset:06x}  type=0x{header.type:02x} index=0x{header.index:02x}")
-    verifier = dnl.rsa_verifier(data)
     digests = ", ".join(verifier.digests) if verifier.digests else "(none)"
     print(
         f"rsa         present={'yes' if verifier.present else 'no'} "
@@ -102,16 +181,22 @@ def _cmd_dnl(args: argparse.Namespace) -> int:
 
 
 def _cmd_container(args: argparse.Namespace) -> int:
-    print(f"{container.CACERT}")
-    print(f"{container.CACERT_BOOT}")
-    print(f"{container.PUBLIC_CODEKEY}")
-    print(f"{container.TESEO_FLASHER}")
-    print(f"{container.TESEO_APP}")
+    paths = [
+        container.CACERT,
+        container.CACERT_BOOT,
+        container.PUBLIC_CODEKEY,
+        container.TESEO_FLASHER,
+        container.TESEO_APP,
+    ]
     for variant in container.V850_VARIANTS:
-        print(container.v850_dnl_path(variant))
-        for section in container.V850_CRC_SECTIONS:
-            print(container.v850_crc_path(section, variant))
-    for path in container.MD5_MANIFESTS:
+        paths.append(container.v850_dnl_path(variant))
+        paths.extend(
+            container.v850_crc_path(section, variant) for section in container.V850_CRC_SECTIONS
+        )
+    paths.extend(container.MD5_MANIFESTS)
+    if args.json:
+        return _emit_json(paths)
+    for path in paths:
         print(path)
     return 0
 
@@ -125,6 +210,10 @@ def _cmd_detect(args: argparse.Namespace) -> int:
     return 0
 
 
+def _add_json(parser: argparse.ArgumentParser) -> None:
+    parser.add_argument("--json", action="store_true", help="emit a JSON object instead of text")
+
+
 def build_parser() -> argparse.ArgumentParser:
     """The ``python -m spswire`` argument parser: one subcommand per container format."""
     parser = argparse.ArgumentParser(
@@ -135,26 +224,32 @@ def build_parser() -> argparse.ArgumentParser:
 
     p_uimage = sub.add_parser("uimage", help="dump a U-Boot legacy image header")
     p_uimage.add_argument("file")
+    _add_json(p_uimage)
     p_uimage.set_defaults(func=_cmd_uimage)
 
     p_mnf = sub.add_parser("mnf", help="dump a .mnf binary index, or its release XML")
     p_mnf.add_argument("file")
     p_mnf.add_argument("--xml", action="store_true", help="print the release XML instead")
+    _add_json(p_mnf)
     p_mnf.set_defaults(func=_cmd_mnf)
 
     p_ivt = sub.add_parser("ivt", help="dump an i.MX6 Image Vector Table")
     p_ivt.add_argument("file")
+    _add_json(p_ivt)
     p_ivt.set_defaults(func=_cmd_ivt)
 
     p_smd = sub.add_parser("smd", help="dump a .smd signature bundle's structure")
     p_smd.add_argument("file")
+    _add_json(p_smd)
     p_smd.set_defaults(func=_cmd_smd)
 
     p_dnl = sub.add_parser("dnl", help="dump a V850 master.dnl $FLW_WRITER summary")
     p_dnl.add_argument("file")
+    _add_json(p_dnl)
     p_dnl.set_defaults(func=_cmd_dnl)
 
     p_container = sub.add_parser("container", help="print the known container.iso path layout")
+    _add_json(p_container)
     p_container.set_defaults(func=_cmd_container)
 
     p_detect = sub.add_parser(

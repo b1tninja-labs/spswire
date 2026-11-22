@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import json
 from pathlib import Path
 
 import pytest
@@ -77,6 +78,26 @@ def test_the_container_subcommand_prints_the_layout(capsys):
     out = capsys.readouterr().out
     assert "security/cacert.pem" in out
     assert "firmware/v850/gmmy16_b3/master.dnl" in out
+
+
+def test_the_uimage_json_flag_emits_an_object(tmp_path, capsys):
+    image = samples.uimage(b"KERNELPAYLOAD", name="Linux-3.14.51")
+    assert cli.main(["uimage", "--json", _write(tmp_path, "uImage", image)]) == 0
+    obj = json.loads(capsys.readouterr().out)
+    assert obj["name"] == "Linux-3.14.51"
+    assert obj["comp"] == "gm-lz77"
+    assert obj["gm_lz77"] is True
+    assert obj["load"] == 0x10008000
+
+
+def test_the_dnl_json_flag_emits_sections_and_rsa(tmp_path, capsys):
+    stream = samples.dnl_stream() + samples.dnl_rsa_blob(["ripemd160", "sha1", "sha256"])
+    assert cli.main(["dnl", "--json", _write(tmp_path, "master.dnl", stream)]) == 0
+    obj = json.loads(capsys.readouterr().out)
+    assert obj["device"] == "D70F4006"
+    assert obj["rsa"]["present"] is True
+    assert set(obj["rsa"]["digests"]) == {"ripemd160", "sha1", "sha256"}
+    assert all("offset" in section for section in obj["sections"])
 
 
 def test_the_detect_subcommand_names_a_format(tmp_path, capsys):
