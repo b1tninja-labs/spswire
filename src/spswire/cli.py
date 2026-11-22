@@ -5,19 +5,23 @@ Each subcommand reads a file's bytes and prints the structure one field per line
 bundle, or a ``master.dnl`` ``$FLW_WRITER`` summary. ``container`` takes no file: it prints the
 documented ``container.iso`` path layout, which is spswire's own data and needs no ISO reader.
 ``detect`` names the format of an unlabelled file (and exits 1 when nothing matches). The dump
-subcommands take ``--json`` for a machine-readable object instead of the aligned text.
+subcommands take ``--json`` for a machine-readable object instead of the aligned text. ``extract``
+emits derived bytes -- a decompressed kernel, or the ``.smd`` signer certificate (raw DER,
+unmodified) -- to stdout or a ``-o`` file.
 
-The CLI only reads and reports. It never writes, flashes, verifies or re-encodes, and it adds no
-dependency: it is pure standard library over the library in this package.
+The library stays read-only: ``extract`` is the CLI's only byte-producing path, and even it never
+flashes a device, re-signs, or re-encodes its input. The CLI adds no dependency: it is pure
+standard library over the library in this package.
 """
 
 from __future__ import annotations
 
 import argparse
 import json
+import sys
 from collections.abc import Sequence
 
-from spswire import container, detect, dnl, ivt, mnf, smd, uimage
+from spswire import container, detect, dnl, ivt, kernel, mnf, smd, uimage
 
 
 def _read(path: str) -> bytes:
@@ -201,6 +205,23 @@ def _cmd_container(args: argparse.Namespace) -> int:
     return 0
 
 
+def _cmd_extract(args: argparse.Namespace) -> int:
+    data = _read(args.file)
+    if args.what == "kernel":
+        out = kernel.decompress(data)
+    else:  # "cert"
+        cert = smd.parse(data).signer_certificate
+        if cert is None:
+            raise smd.SMDError("bundle carries no signer certificate")
+        out = cert
+    if args.output:
+        with open(args.output, "wb") as handle:
+            handle.write(out)
+    else:
+        sys.stdout.buffer.write(out)
+    return 0
+
+
 def _cmd_detect(args: argparse.Namespace) -> int:
     kind = detect.identify(_read(args.file))
     if kind is None:
@@ -257,6 +278,14 @@ def build_parser() -> argparse.ArgumentParser:
     )
     p_detect.add_argument("file")
     p_detect.set_defaults(func=_cmd_detect)
+
+    p_extract = sub.add_parser(
+        "extract", help="write derived bytes (a decompressed kernel or signer cert) to stdout"
+    )
+    p_extract.add_argument("what", choices=("kernel", "cert"))
+    p_extract.add_argument("file")
+    p_extract.add_argument("-o", "--output", help="write to this file instead of stdout")
+    p_extract.set_defaults(func=_cmd_extract)
 
     return parser
 

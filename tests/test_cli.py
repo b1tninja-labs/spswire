@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import base64
 import json
 from pathlib import Path
 
@@ -109,6 +110,33 @@ def test_the_detect_subcommand_names_a_format(tmp_path, capsys):
 def test_the_detect_subcommand_exits_1_on_unknown(tmp_path, capsys):
     assert cli.main(["detect", _write(tmp_path, "blob.bin", b"\x00" * 64)]) == 1
     assert capsys.readouterr().out.strip() == "unknown"
+
+
+def test_extract_kernel_writes_the_decompressed_payload(tmp_path, capsysbinary):
+    image = samples.lz77_uimage(b"the vmlinux bytes")
+    assert cli.main(["extract", "kernel", _write(tmp_path, "uImage", image)]) == 0
+    assert capsysbinary.readouterr().out == b"the vmlinux bytes"
+
+
+def test_extract_kernel_to_a_file(tmp_path):
+    image = samples.lz77_uimage(b"the vmlinux bytes")
+    out = tmp_path / "vmlinux"
+    assert cli.main(["extract", "kernel", "-o", str(out), _write(tmp_path, "uImage", image)]) == 0
+    assert out.read_bytes() == b"the vmlinux bytes"
+
+
+def test_extract_cert_emits_the_signer_bytes(tmp_path, capsysbinary):
+    bundle = samples.smd(b"DER-CERT-BYTES", b"D" * 32, b"S" * 256, {})
+    assert cli.main(["extract", "cert", _write(tmp_path, "part.smd", bundle.encode("ascii"))]) == 0
+    assert capsysbinary.readouterr().out == b"DER-CERT-BYTES"
+
+
+def test_extract_cert_without_a_signer_is_an_error(tmp_path):
+    body = base64.b64encode(b"x" * 32).decode("ascii")
+    pem = f"-----BEGIN SHA256 MANIFEST-----\n{body}\n-----END SHA256 MANIFEST-----\n"
+    with pytest.raises(SystemExit) as caught:
+        cli.main(["extract", "cert", _write(tmp_path, "nocert.smd", pem.encode("ascii"))])
+    assert caught.value.code == 2
 
 
 def test_a_missing_file_returns_an_error_code(tmp_path):
