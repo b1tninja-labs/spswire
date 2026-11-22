@@ -12,6 +12,6 @@ vendored here.
 
 from __future__ import annotations
 
-from spswire import ivt, lz77, mnf, smd, uimage
+from spswire import container, ivt, kernel, lz77, mnf, smd, uimage
 
-__all__ = ["ivt", "lz77", "mnf", "smd", "uimage"]
+__all__ = ["container", "ivt", "kernel", "lz77", "mnf", "smd", "uimage"]

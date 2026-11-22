@@ -31,6 +31,11 @@ field from the documented layouts.
   signature, and the per-part-number digest/signature rows. It is not PKCS#7 and this reader does
   not evaluate the signatures.
 - Recover the base64 release XML carried in a `.mnf` manifest.
+- Decompress a `uImage` to its kernel end to end (the header's codec drives it: `0x4d` LZ77 or an
+  uncompressed image), composing the `uimage` and `lz77` readers.
+- Map the known `container.iso` paths (the CA trust anchor, the V850 `master.dnl` and its `*.crc`
+  sidecars) to their bytes, delegating the ISO 9660 walk to an injected reader such as
+  `iso9660.Volume` so no ISO parser and no dependency on one lives here.
 
 **What it is not.** `spswire` reads bytes. It does not flash, write, program, sign, verify a
 signature, or open a device, a serial port, a socket, or a vehicle. It is not `spskit` (which

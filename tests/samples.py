@@ -105,3 +105,21 @@ def roundtrip_lz77(plaintext: bytes) -> bytes:
     """A literal-only reference encoding of ``plaintext`` for the decoder to recover."""
     tokens = [lz77_token(byte) for byte in plaintext]
     return lz77_buffer(len(plaintext), tokens)
+
+
+def lz77_uimage(plaintext: bytes) -> bytes:
+    """A uImage whose payload is a GM 0x4d LZ77 buffer that decodes to ``plaintext``."""
+    return uimage(roundtrip_lz77(plaintext), comp=uimage_mod.COMP_GM_LZ77)
+
+
+class FakeVolume:
+    """A minimal ISO-9660 reader stand-in: member(path) over a dict, raising KeyError-as-member."""
+
+    def __init__(self, members: dict[str, bytes]) -> None:
+        self._members = members
+
+    def member(self, path: str) -> bytes:
+        try:
+            return self._members[path]
+        except KeyError:
+            raise FileNotFoundError(path) from None
