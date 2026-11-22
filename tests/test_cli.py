@@ -79,6 +79,17 @@ def test_the_container_subcommand_prints_the_layout(capsys):
     assert "firmware/v850/gmmy16_b3/master.dnl" in out
 
 
+def test_the_detect_subcommand_names_a_format(tmp_path, capsys):
+    image = samples.uimage(b"payload")
+    assert cli.main(["detect", _write(tmp_path, "uImage", image)]) == 0
+    assert capsys.readouterr().out.strip() == "uimage"
+
+
+def test_the_detect_subcommand_exits_1_on_unknown(tmp_path, capsys):
+    assert cli.main(["detect", _write(tmp_path, "blob.bin", b"\x00" * 64)]) == 1
+    assert capsys.readouterr().out.strip() == "unknown"
+
+
 def test_a_missing_file_returns_an_error_code(tmp_path):
     with pytest.raises(SystemExit) as caught:
         cli.main(["uimage", str(tmp_path / "does-not-exist")])

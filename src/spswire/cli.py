@@ -4,6 +4,7 @@ Each subcommand reads a file's bytes and prints the structure one field per line
 ``uImage`` header, a ``.mnf`` binary index (or its release XML), an i.MX IVT, a ``.smd``
 bundle, or a ``master.dnl`` ``$FLW_WRITER`` summary. ``container`` takes no file: it prints the
 documented ``container.iso`` path layout, which is spswire's own data and needs no ISO reader.
+``detect`` names the format of an unlabelled file (and exits 1 when nothing matches).
 
 The CLI only reads and reports. It never writes, flashes, verifies or re-encodes, and it adds no
 dependency: it is pure standard library over the library in this package.
@@ -14,7 +15,7 @@ from __future__ import annotations
 import argparse
 from collections.abc import Sequence
 
-from spswire import container, dnl, ivt, mnf, smd, uimage
+from spswire import container, detect, dnl, ivt, mnf, smd, uimage
 
 
 def _read(path: str) -> bytes:
@@ -115,6 +116,15 @@ def _cmd_container(args: argparse.Namespace) -> int:
     return 0
 
 
+def _cmd_detect(args: argparse.Namespace) -> int:
+    kind = detect.identify(_read(args.file))
+    if kind is None:
+        print("unknown")
+        return 1
+    print(kind)
+    return 0
+
+
 def build_parser() -> argparse.ArgumentParser:
     """The ``python -m spswire`` argument parser: one subcommand per container format."""
     parser = argparse.ArgumentParser(
@@ -146,6 +156,12 @@ def build_parser() -> argparse.ArgumentParser:
 
     p_container = sub.add_parser("container", help="print the known container.iso path layout")
     p_container.set_defaults(func=_cmd_container)
+
+    p_detect = sub.add_parser(
+        "detect", help="name the container format of a file (exit 1 if unknown)"
+    )
+    p_detect.add_argument("file")
+    p_detect.set_defaults(func=_cmd_detect)
 
     return parser
 
